@@ -5,6 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
+unet_model_checkpoints
 
 # Virtual environments
 .venv
