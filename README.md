@@ -1,0 +1,1 @@
+A work in progress as I learn about convolutional neural networks and the UNet architechture to denoise or defog images.  
