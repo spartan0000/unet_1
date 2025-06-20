@@ -84,7 +84,7 @@ def main():
         
         print(f'Completed [{epoch + 1}/{n_epochs}] - Training loss: {avg_train_loss:.4f}: Validation loss: {avg_val_loss:.4f} ')
 
-        torch.save(model.state_dict(), 'unet_model_checkpoints')
+        torch.save(model.state_dict(), 'unet_model_checkpoints.pth')
         
 if __name__ == '__main__':     
     main()
