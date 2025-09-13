@@ -5,38 +5,44 @@ import torch.nn.functional as F
 
 
 
+class ConvBlock(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.block = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1),
+            nn.ReLU(),
+            nn.Conv2d(out_channels, out_channels, kernel_size = 3, padding = 1),
+            nn.ReLU()
+        )
+    def forward(self, x):
+        return self.block(x)
+
 
 class Unet(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels = 3, out_channels = 3):
         super().__init__()
 
-        def conv_block(in_channels, out_channels):
-            return nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1),
-                nn.ReLU(inplace = True),
-                nn.Conv2d(out_channels, out_channels, kernel_size = 3, padding = 1),
-                nn.ReLU(inplace = True),
-            )
+        
 
-        self.enc1 = conv_block(3, 64)
-        self.enc2 = conv_block(64, 128)
-        self.enc3 = conv_block(128, 256)
-        self.enc4 = conv_block(256, 512)
+        self.enc1 = ConvBlock(in_channels, 64)
+        self.enc2 = ConvBlock(64, 128)
+        self.enc3 = ConvBlock(128, 256)
+        self.enc4 = ConvBlock(256, 512)
 
-        self.pool = nn.MaxPool2d(2)
-        self.bottleneck = conv_block(512, 1024)
+        self.pool = nn.MaxPool2d(kernel_size = 2, stride = 2)
+        self.bottleneck = ConvBlock(512, 1024)
 
         self.up4 = nn.ConvTranspose2d(1024, 512, kernel_size = 2, stride = 2) #skip connections take the 512 output here, add 512 and input 1024 in the next line's conv layer
-        self.dec4 = conv_block(1024, 512)
+        self.dec4 = ConvBlock(1024, 512)
 
         self.up3 = nn.ConvTranspose2d(512, 256, kernel_size = 2, stride = 2)
-        self.dec3 = conv_block(512, 256)
+        self.dec3 = ConvBlock(512, 256)
 
         self.up2 = nn.ConvTranspose2d(256, 128, kernel_size = 2, stride = 2)
-        self.dec2 = conv_block(256, 128)
+        self.dec2 = ConvBlock(256, 128)
 
         self.up1 = nn.ConvTranspose2d(128, 64, kernel_size = 2, stride = 2)
-        self.dec1 = conv_block(128, 64)
+        self.dec1 = ConvBlock(128, 64)
 
         self.output = nn.Conv2d(64, 3, kernel_size = 1)
 
