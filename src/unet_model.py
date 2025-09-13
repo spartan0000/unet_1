@@ -71,32 +71,3 @@ class Unet(nn.Module):
 
 
 
-class UnetModel(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-        def conv_block(in_channels, out_channels):
-            return nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, kernel_size = 3, padding = 1),
-                nn.ReLU(),
-                nn.Conv2d(out_channels, out_channels, kernel_size = 3, padding = 1),
-                nn.ReLU(),
-                            )
-
-        self.pool = nn.maxPool2d(kernel_size = 2, stride = 2)
-
-        self.enc1 = conv_block(3,64)
-        self.enc2 = conv_block(64,128)
-        self.enc3 = conv_block(128,256)
-        self.enc4 = conv_block(256,512)
-
-        self.bottleneck = conv_block(512,1024)
-
-        self.up4 = nn.ConvTranspose2d(1024,512, kernel_size = 2, stride = 2)
-        self.dec4 = conv_block(1024,512)
-
-        self.up3 = nn.ConvTranspose2d(512,256, kernel_size = 1, stride = 2)
-        self.dec3 = conv_block(512,256)
-
-        self.up2 = nn.ConvTranspose2d(256,128)
-        self.dec2 = conv_block(256,128)
