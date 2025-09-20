@@ -12,6 +12,8 @@ from torchvision import transforms
 from PIL import Image
 import numpy as np
 
+from timeit import default_timer as timer
+
 
 from sklearn.model_selection import train_test_split
 
@@ -38,19 +40,21 @@ train_loader, test_loader, train_subset_loader, test_subset_loader = build_foggy
 noisy_train_files, noisy_test_files = train_test_split_foggy_noisy(clear_dir, noisy_dir)
 noisy_train_loader, noisy_test_loader, noisy_train_subset_loader, noisy_test_subset_loader = build_foggy_noisy_data_loader(clear_dir, noisy_dir, noisy_train_files, noisy_test_files, 500, 100)
 
-#single batch test run
+#subset test run
 
 
 
 def main():
+
+    start_time = timer()
     training_loss = 0.0
 
-    model_lite = Unet_lite().to(device)
+    model_lite = Unet_lite(3,3).to(device)
 
     loss_fn = nn.MSELoss()
     optimizer = torch.optim.Adam(params = model_lite.parameters(), lr = lr)
 
-    for images, targets in next(iter(train_subset_loader)):
+    for images, targets in noisy_train_subset_loader:
         images, targets = images.to(device), targets.to(device)
 
         outputs = model_lite(images)
@@ -62,17 +66,21 @@ def main():
 
         optimizer.step()
 
-        training_loss += loss.item() * images.size(0)
+    training_loss += loss.item() * images.size(0)
     
-    training_loss /= len(train_subset_loader.dataset)
+    training_loss /= len(noisy_train_subset_loader.dataset)
     test_loss = 0.0
     model_lite.eval()
     with torch.inference_mode():
-        for images, targets in next(iter(test_subset_loader)):
-            images, targest = images.to(device), targets.to(device)
+        for images, targets in noisy_test_subset_loader:
+            images, targets = images.to(device), targets.to(device)
             test_outputs = model_lite(images)
             loss = loss_fn(test_outputs, targets)
             test_loss += loss.item() * images.size(0)
-        test_loss /= len(test_subset_loader.dataset)
-
+        test_loss /= len(noisy_test_subset_loader.dataset)
+    end_time = timer()
     print(f' Training loss: {training_loss:.4f} | Test loss: {test_loss:.4f}')
+    print(f'Total time: {end_time - start_time:.4f} seconds on {device}')
+
+if __name__ == '__main__':
+    main()
