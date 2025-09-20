@@ -6,7 +6,7 @@ from datasets import get_dataset_config_names
 import matplotlib.pyplot as plt
 
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Subset, Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
 import numpy as np
@@ -68,7 +68,7 @@ class FoggyNoisyDataSet(Dataset):
 
 
 #each clear image has a paired foggy image such that img001.jpg has a corresponding img001_foggy.jpg
-def train_test_splt(clear_dir, foggy_dir):
+def train_test_split_foggy(clear_dir, foggy_dir):
 #getting a list of all filenames that have a paired clear and foggy image.  
 #returns filenames for training and testing set
 
@@ -77,9 +77,13 @@ def train_test_splt(clear_dir, foggy_dir):
     train_files, test_files = train_test_split(all_filenames, test_size = 0.2, random_state = 100)
     return train_files, test_files
 
+def train_test_split_foggy_noisy(clear_dir, foggy_noisy_dir):
+    all_filenames = [f for f in os.listdir(clear_dir) if f.endswith('.jpg') and os.path.exists(os.path.join(clear_dir, f.replace('.jpg', '_foggy_noisy.jpg')))]
+    train_files, test_files = train_test_split(all_filenames, test_size = 0.2, randome_state = 100)
+    return train_files, test_files
 
 
-def build_foggy_data_loader(clear_dir, foggy_dir, train_files, test_files):
+def build_foggy_data_loader(clear_dir, foggy_dir, train_files, test_files, train_subset, test_subset):
     transform = transforms.Compose([
         transforms.ToTensor(),
     ])
@@ -87,12 +91,19 @@ def build_foggy_data_loader(clear_dir, foggy_dir, train_files, test_files):
     train_data = FoggyDataSet(foggy_dir, clear_dir, train_files, transform)
     test_data = FoggyDataSet(foggy_dir, clear_dir, test_files, transform)
 
+    train_subset = Subset(train_data, range(train_subset))
+    test_subset = Subset(test_data, range(test_subset))
+
+    train_subset_loader = DataLoader(train_subset, batch_size = 32, shuffle = True)
+    test_subset_loader = DataLoader(test_subset, batch_size = 32)
+
     train_loader = DataLoader(train_data, batch_size = 32, shuffle = True)
     test_loader = DataLoader(test_data, batch_size = 32)
 
-    return train_loader, test_loader
+    return train_loader, test_loader, train_subset_loader, test_subset_loader
 
-def build_foggy_noisy_data_loader(clear_dir, foggy_noisy_dir, train_files, test_files):
+
+def build_foggy_noisy_data_loader(clear_dir, foggy_noisy_dir, train_files, test_files, train_subset, test_subset):
     transform = transforms.Compose([
         transforms.ToTensor(),
     ])
@@ -100,7 +111,13 @@ def build_foggy_noisy_data_loader(clear_dir, foggy_noisy_dir, train_files, test_
     train_data = FoggyNoisyDataSet(foggy_noisy_dir, clear_dir, train_files, transform)
     test_data = FoggyNoisyDataSet(foggy_noisy_dir, clear_dir, test_files, transform)
 
+    train_subset = Subset(train_data, range(train_subset))
+    test_subset = Subset(test_data, range(test_subset))
+
+    train_subset_loader, = DataLoader(train_subset, batch_size = 32, shuffle = True)
+    test_subset_loader = DataLoader(test_subset, batch_size = 32)
+
     train_loader = DataLoader(train_data, batch_size = 32, shuffle = True)
     test_loader = DataLoader(test_data, batch_size = 32)
 
-    return train_loader, test_loader
+    return train_loader, test_loader, train_subset_loader, test_subset_loader
