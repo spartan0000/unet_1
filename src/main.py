@@ -16,8 +16,8 @@ from sklearn.model_selection import train_test_split
 
 #other imports
 
-from build_dataloader import FoggyDataSet, train_test_splt, build_data_loader
-from unet_model import Unet
+from build_dataloader import FoggyDataSet, FoggyNoisyDataSet, train_test_splt, build_data_loader, build_foggy_noisy_data_loader
+from unet_model import Unet, Unet_lite
 
 #hyperparameters
 n_epochs = 1
@@ -27,10 +27,14 @@ lr = 1e-4
 
 clear_dir = 'D:/flickr30k_clear'
 foggy_dir = 'D:/flickr30k_foggy'
+noisy_dir = 'D:/flickr30k_foggy_noisy'
 
 
 train_files, test_files = train_test_splt(clear_dir, foggy_dir)
 train_loader, test_loader = build_data_loader(clear_dir, foggy_dir, train_files, test_files)
+
+noisy_train_files, noisy_test_files = train_test_splt(clear_dir, noisy_dir)
+noisy_train_loader, noisy_test_loader = build_foggy_noisy_data_loader(clear_dir, noisy_dir, noisy_train_files, noisy_test_files)
 
 
 def main():

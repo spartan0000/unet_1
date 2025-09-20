@@ -40,11 +40,32 @@ class FoggyDataSet(Dataset):
 
         return foggy_image, clear_image
     
-    
+class FoggyNoisyDataSet(Dataset):
+    def __init__(self, foggy_noisy_dir, clear_dir, filenames, transform = None):
+        super().__init__()
+        self.foggy_noisy_dir = foggy_noisy_dir
+        self.clear_dir = clear_dir
+        self.filenames = filenames
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.filenames)
+
+    def __getitem__(self, idx):
+        filename = self.filenames[idx]
+
+        foggy_noisy_path = os.path.join(self.foggy_noisy_dir, filename.replace('.jpg', '_foggy_noisy.jpg'))
+        clear_path = os.path.join(self.clear_dir, filename)
+
+        foggy_noisy_image = Image.open(foggy_noisy_path).convert('RGB')
+        clear_image = Image.open(clear_path).convert('RGB')
+
+        if self.transform:
+            foggy_noisy_image = self.transform(foggy_noisy_image)
+            clear_image = self.transform(clear_image)
+        return foggy_noisy_image, clear_image 
 #train_test_split
 
-clear_dir = 'D:/flickr30k_clear'
-foggy_dir = 'D:/flickr30k_foggy'
 
 #each clear image has a paired foggy image such that img001.jpg has a corresponding img001_foggy.jpg
 def train_test_splt(clear_dir, foggy_dir):
@@ -58,13 +79,26 @@ def train_test_splt(clear_dir, foggy_dir):
 
 
 
-def build_data_loader(clear_dir, foggy_dir, train_files, test_files):
+def build_foggy_data_loader(clear_dir, foggy_dir, train_files, test_files):
     transform = transforms.Compose([
         transforms.ToTensor(),
     ])
 
     train_data = FoggyDataSet(foggy_dir, clear_dir, train_files, transform)
     test_data = FoggyDataSet(foggy_dir, clear_dir, test_files, transform)
+
+    train_loader = DataLoader(train_data, batch_size = 32, shuffle = True)
+    test_loader = DataLoader(test_data, batch_size = 32)
+
+    return train_loader, test_loader
+
+def build_foggy_noisy_data_loader(clear_dir, foggy_noisy_dir, train_files, test_files):
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+    ])
+
+    train_data = FoggyNoisyDataSet(foggy_noisy_dir, clear_dir, train_files, transform)
+    test_data = FoggyNoisyDataSet(foggy_noisy_dir, clear_dir, test_files, transform)
 
     train_loader = DataLoader(train_data, batch_size = 32, shuffle = True)
     test_loader = DataLoader(test_data, batch_size = 32)
