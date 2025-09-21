@@ -52,7 +52,7 @@ def main():
         start_time = timer()
         training_loss = 0.0
 
-        
+        train_psnr = 0.0
               
         model_lite.train()
 
@@ -65,7 +65,7 @@ def main():
             outputs = model_lite(images)
             loss = loss_fn(outputs, targets)
             
-
+            batch_psnr = 10 * torch.log10(1/loss.item())
             optimizer.zero_grad()
 
             loss.backward()
@@ -73,14 +73,15 @@ def main():
             optimizer.step()
 
             training_loss += loss.item() * images.size(0)
-            
+            train_psnr += batch_psnr * images.size(0)
 
 
 
         training_loss /= len(noisy_train_subset_loader.dataset)
-        
+        train_psnr /= len(noisy_train_subset_loader.dataset)
 
         test_loss = 0.0
+        test_psnr = 0.0
         model_lite.eval()
         with torch.inference_mode():
             for images, targets in noisy_test_subset_loader:
@@ -88,13 +89,16 @@ def main():
                 test_outputs = model_lite(images)
                 loss = loss_fn(test_outputs, targets)
 
+                batch_psnr = 10 * torch.log10(1/loss.item())
+
                 
                 test_loss += loss.item() * images.size(0)
+                test_psnr == batch_psnr * images.size(0)
 
             test_loss /= len(noisy_test_subset_loader.dataset)
-            
+            test_psnr /= len(noisy_test_subset_loader.dataset)
         
-        print(f' {epoch + 1} / {n_epochs} - Training loss: {training_loss:.4f}| Test loss: {test_loss:.4f}')
+        print(f' {epoch + 1} / {n_epochs} - Training loss: {training_loss:.4f}| PSNR: {test_psnr:.4f} dB | Test loss: {test_loss:.4f} | PSNR: {test_psnr:.4f} dB')
         
         
         end_time = timer()
