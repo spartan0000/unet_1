@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
+from torchmetrics import PeakSignalNoiseRatio, StructuralSimilarityIndexMeasure
 from PIL import Image
 import numpy as np
 
@@ -35,10 +36,10 @@ noisy_dir = 'D:/flickr30k_foggy_noisy'
 
 
 train_files, test_files = train_test_split_foggy(clear_dir, foggy_dir)
-train_loader, test_loader, train_subset_loader, test_subset_loader = build_foggy_data_loader(clear_dir, foggy_dir, train_files, test_files, 500, 100)
+train_loader, test_loader, train_subset_loader, test_subset_loader = build_foggy_data_loader(clear_dir, foggy_dir, train_files, test_files, 1000, 500)
 
 noisy_train_files, noisy_test_files = train_test_split_foggy_noisy(clear_dir, noisy_dir)
-noisy_train_loader, noisy_test_loader, noisy_train_subset_loader, noisy_test_subset_loader = build_foggy_noisy_data_loader(clear_dir, noisy_dir, noisy_train_files, noisy_test_files, 500, 100)
+noisy_train_loader, noisy_test_loader, noisy_train_subset_loader, noisy_test_subset_loader = build_foggy_noisy_data_loader(clear_dir, noisy_dir, noisy_train_files, noisy_test_files, 1000, 500)
 
 #subset test run
 model_lite = Unet_lite(3,3).to(device)
@@ -49,9 +50,11 @@ def main():
 
     for epoch in range(n_epochs):
         start_time = timer()
-        training_loss = 0.0
+        training_loss, train_psnr, train_ssim = 0.0, 0.0, 0.0
 
-        
+        psnr = PeakSignalNoiseRatio().to(device)
+        ssim = StructuralSimilarityIndexMeasure().to(device)
+              
         model_lite.train()
 
 
@@ -62,6 +65,7 @@ def main():
 
             outputs = model_lite(images)
             loss = loss_fn(outputs, targets)
+            
 
             optimizer.zero_grad()
 
@@ -69,20 +73,36 @@ def main():
 
             optimizer.step()
 
-        training_loss += loss.item() * images.size(0)
-        
+            training_loss += loss.item() * images.size(0)
+            train_psnr += psnr(outputs, targets).item() * images.size(0)
+            train_ssim += ssim(outputs, targets).item() * images.size(0)
+
+
+
         training_loss /= len(noisy_train_subset_loader.dataset)
-        test_loss = 0.0
+        train_psnr /= len(noisy_train_subset_loader.dataset)
+        train_ssim /= len(noisy_train_subset_loader.dataset)
+
+        test_loss, test_psnr, test_ssim = 0.0, 0.0, 0.0
         model_lite.eval()
         with torch.inference_mode():
             for images, targets in noisy_test_subset_loader:
                 images, targets = images.to(device), targets.to(device)
                 test_outputs = model_lite(images)
                 loss = loss_fn(test_outputs, targets)
+
+                test_psnr += psnr(test_outputs, targets).item() * images.size(0)
+                test_ssim += ssim(test_outputs, targets).item() * images.size(0)
                 test_loss += loss.item() * images.size(0)
+
             test_loss /= len(noisy_test_subset_loader.dataset)
+            test_psnr /= len(noisy_test_subset_loader.dataset)
+            test_ssim /= len(noisy_test_subset_loader.dataset)
+        
+        print(f' {epoch + 1} / {n_epochs} - Training loss: {training_loss:.4f} | PSNR: {train_psnr:.4f} | SSIM: {train_ssim:.4f}')
+        print(f' {epoch + 1} / {n_epochs} - Test loss: {test_loss:.4f} | PSNR: {test_psnr:.4f} | SSIM: {test_ssim:.4f}')
+        
         end_time = timer()
-        print(f' {epoch + 1} / {n_epochs} - Training loss: {training_loss:.4f} | Test loss: {test_loss:.4f}')
         print(f'Total time: {end_time - start_time:.4f} seconds on {device}')
 
 
