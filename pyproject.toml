@@ -8,5 +8,4 @@ dependencies = [
     "datasets>=3.6.0",
     "matplotlib>=3.10.3",
     "scikit-learn>=1.7.0",
-    "torchmetrics>=1.8.2",
 ]
