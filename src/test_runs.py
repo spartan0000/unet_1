@@ -36,10 +36,10 @@ noisy_dir = 'D:/flickr30k_foggy_noisy'
 
 
 train_files, test_files = train_test_split_foggy(clear_dir, foggy_dir)
-train_loader, test_loader, train_subset_loader, test_subset_loader = build_foggy_data_loader(clear_dir, foggy_dir, train_files, test_files, 2000, 1000)
+train_loader, test_loader, train_subset_loader, test_subset_loader = build_foggy_data_loader(clear_dir, foggy_dir, train_files, test_files, 3000, 1500)
 
 noisy_train_files, noisy_test_files = train_test_split_foggy_noisy(clear_dir, noisy_dir)
-noisy_train_loader, noisy_test_loader, noisy_train_subset_loader, noisy_test_subset_loader = build_foggy_noisy_data_loader(clear_dir, noisy_dir, noisy_train_files, noisy_test_files, 2000, 1000)
+noisy_train_loader, noisy_test_loader, noisy_train_subset_loader, noisy_test_subset_loader = build_foggy_noisy_data_loader(clear_dir, noisy_dir, noisy_train_files, noisy_test_files, 3000, 1500)
 
 #subset test run
 model_lite = Unet_lite(3,3).to(device)
@@ -77,7 +77,7 @@ def main():
             train_psnr += batch_psnr * images.size(0)
 
             if i % 2 == 0:
-                print(f'Batch: {i+1} | Training loss: {loss.item():.4f} | PSNR: {batch_psnr:.4f} dB')
+                print(f'Batch: {i} | Training loss: {loss.item():.4f} | PSNR: {batch_psnr:.4f} dB')
 
         #training_loss /= len(noisy_train_subset_loader.dataset)
         #train_psnr /= len(noisy_train_subset_loader.dataset)
@@ -98,9 +98,9 @@ def main():
                 test_loss += loss.item() * images.size(0)
                 test_psnr == batch_psnr * images.size(0)
 
-                if j % 2 == 0: #just get output for even numbered batches
+                if j % 2 == 0: #just get output for every other batche   
 
-                    print(f'Test batch: {j+1} | Test loss: {loss.item():.4f} | PSNR: {batch_psnr:.4f} dB')
+                    print(f'Test batch: {j} | Test loss: {loss.item():.4f} | PSNR: {batch_psnr:.4f} dB')
             test_loss /= len(noisy_test_subset_loader.dataset)
             test_psnr /= len(noisy_test_subset_loader.dataset)
         
