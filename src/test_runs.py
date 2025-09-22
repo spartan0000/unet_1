@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
+from torch.cuda.amp import autocast, GradScaler
 from torchvision import transforms
 
 from PIL import Image
@@ -45,6 +46,9 @@ noisy_train_loader, noisy_test_loader, noisy_train_subset_loader, noisy_test_sub
 model_lite = Unet_lite(3,3).to(device)
 loss_fn = nn.MSELoss()
 optimizer = torch.optim.Adam(params = model_lite.parameters(), lr = lr)
+use_amp = True
+scaler = torch.amp.GradScaler('cuda', enabled = use_amp)
+
 
 def main():
 
@@ -61,17 +65,19 @@ def main():
 
         for i, (images, targets) in enumerate(noisy_train_subset_loader):
             images, targets = images.to(device), targets.to(device)
-
-            outputs = model_lite(images)
-            loss = loss_fn(outputs, targets)
             
+            with torch.autocast(device_type = 'cuda', enabled = use_amp):
+                outputs = model_lite(images)
+                loss = loss_fn(outputs, targets)
+                
             batch_psnr = 10 * torch.log10(1/loss)
             batch_psnr = batch_psnr.item()
             optimizer.zero_grad()
 
-            loss.backward()
+            scaler.scale(loss).backward()
 
-            optimizer.step()
+            scaler.step(optimizer)
+            scaler.update()
 
             training_loss += loss.item() * images.size(0)
             train_psnr += batch_psnr * images.size(0)
