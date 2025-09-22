@@ -59,13 +59,14 @@ def main():
 
         
 
-        for images, targets in noisy_train_subset_loader:
+        for i, (images, targets) in enumerate(noisy_train_subset_loader):
             images, targets = images.to(device), targets.to(device)
 
             outputs = model_lite(images)
             loss = loss_fn(outputs, targets)
             
-            batch_psnr = 10 * torch.log10(1/loss.item())
+            batch_psnr = 10 * torch.log10(1/loss)
+            batch_psnr = batch_psnr.item()
             optimizer.zero_grad()
 
             loss.backward()
@@ -75,30 +76,31 @@ def main():
             training_loss += loss.item() * images.size(0)
             train_psnr += batch_psnr * images.size(0)
 
+            print(f'Batch: {i+1} | Training loss: {loss.item():.4f} | PSNR: {batch_psnr:.4f} dB')
 
-
-        training_loss /= len(noisy_train_subset_loader.dataset)
-        train_psnr /= len(noisy_train_subset_loader.dataset)
+        #training_loss /= len(noisy_train_subset_loader.dataset)
+        #train_psnr /= len(noisy_train_subset_loader.dataset)
 
         test_loss = 0.0
         test_psnr = 0.0
         model_lite.eval()
         with torch.inference_mode():
-            for images, targets in noisy_test_subset_loader:
+            for j, (images, targets) in enumerate(noisy_test_subset_loader):
                 images, targets = images.to(device), targets.to(device)
                 test_outputs = model_lite(images)
                 loss = loss_fn(test_outputs, targets)
 
-                batch_psnr = 10 * torch.log10(1/loss.item())
+                batch_psnr = 10 * torch.log10(1/loss)
+                batch_psnr = batch_psnr.item()
 
                 
                 test_loss += loss.item() * images.size(0)
                 test_psnr == batch_psnr * images.size(0)
-
+                print(f'Test batch: {j+1} | Test loss: {loss.item():.4f} | PSNR: {batch_psnr:.4f} dB')
             test_loss /= len(noisy_test_subset_loader.dataset)
             test_psnr /= len(noisy_test_subset_loader.dataset)
         
-        print(f' {epoch + 1} / {n_epochs} - Training loss: {training_loss:.4f}| PSNR: {test_psnr:.4f} dB | Test loss: {test_loss:.4f} | PSNR: {test_psnr:.4f} dB')
+        #print(f' {epoch + 1} / {n_epochs} - Training loss: {training_loss:.4f}| PSNR: {test_psnr:.4f} dB | Test loss: {test_loss:.4f} | PSNR: {test_psnr:.4f} dB')
         
         
         end_time = timer()
