@@ -26,7 +26,7 @@ from build_dataloader import FoggyDataSet, FoggyNoisyDataSet, train_test_split_f
 from unet_model import Unet, Unet_lite
 
 #hyperparameters
-n_epochs = 1
+n_epochs = 2
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 lr = 1e-4
 
@@ -37,15 +37,15 @@ noisy_dir = 'D:/flickr30k_foggy_noisy'
 
 
 train_files, test_files = train_test_split_foggy(clear_dir, foggy_dir)
-train_loader, test_loader, train_subset_loader, test_subset_loader = build_foggy_data_loader(clear_dir, foggy_dir, train_files, test_files, 3000, 1500)
+train_loader, test_loader, train_subset_loader, test_subset_loader = build_foggy_data_loader(clear_dir, foggy_dir, train_files, test_files, 10000, 2500)
 
 noisy_train_files, noisy_test_files = train_test_split_foggy_noisy(clear_dir, noisy_dir)
-noisy_train_loader, noisy_test_loader, noisy_train_subset_loader, noisy_test_subset_loader = build_foggy_noisy_data_loader(clear_dir, noisy_dir, noisy_train_files, noisy_test_files, 3000, 1500)
+noisy_train_loader, noisy_test_loader, noisy_train_subset_loader, noisy_test_subset_loader = build_foggy_noisy_data_loader(clear_dir, noisy_dir, noisy_train_files, noisy_test_files, 10000, 2500)
 
 #subset test run
-model_lite = Unet_lite(3,3).to(device)
+model = Unet(3,3).to(device)
 loss_fn = nn.MSELoss()
-optimizer = torch.optim.Adam(params = model_lite.parameters(), lr = lr)
+optimizer = torch.optim.Adam(params = model.parameters(), lr = lr)
 use_amp = True
 scaler = torch.amp.GradScaler('cuda', enabled = use_amp)
 
@@ -58,16 +58,16 @@ def main():
 
         train_psnr = 0.0
               
-        model_lite.train()
+        model.train()
 
 
         
 
-        for i, (images, targets) in enumerate(noisy_train_subset_loader):
+        for i, (images, targets) in enumerate(noisy_train_loader):
             images, targets = images.to(device), targets.to(device)
-            
+
             with torch.autocast(device_type = 'cuda', enabled = use_amp):
-                outputs = model_lite(images)
+                outputs = model(images)
                 loss = loss_fn(outputs, targets)
                 
             batch_psnr = 10 * torch.log10(1/loss)
@@ -82,19 +82,19 @@ def main():
             training_loss += loss.item() * images.size(0)
             train_psnr += batch_psnr * images.size(0)
 
-            if i % 2 == 0:
-                print(f'Batch: {i} | Training loss: {loss.item():.4f} | PSNR: {batch_psnr:.4f} dB')
+            if i % 100 == 0:
+                print(f'Epoch: {epoch} | Batch: {i} | Training loss: {loss.item():.4f} | PSNR: {batch_psnr:.4f} dB')
 
         #training_loss /= len(noisy_train_subset_loader.dataset)
         #train_psnr /= len(noisy_train_subset_loader.dataset)
 
         test_loss = 0.0
         test_psnr = 0.0
-        model_lite.eval()
+        model.eval()
         with torch.inference_mode():
-            for j, (images, targets) in enumerate(noisy_test_subset_loader):
+            for j, (images, targets) in enumerate(noisy_test_loader):
                 images, targets = images.to(device), targets.to(device)
-                test_outputs = model_lite(images)
+                test_outputs = model(images)
                 loss = loss_fn(test_outputs, targets)
 
                 batch_psnr = 10 * torch.log10(1/loss)
@@ -104,9 +104,9 @@ def main():
                 test_loss += loss.item() * images.size(0)
                 test_psnr == batch_psnr * images.size(0)
 
-                if j % 2 == 0: #just get output for every other batche   
+                if j % 100 == 0:   
 
-                    print(f'Test batch: {j} | Test loss: {loss.item():.4f} | PSNR: {batch_psnr:.4f} dB')
+                    print(f'Epoch: {epoch} | Test batch: {j} | Test loss: {loss.item():.4f} | PSNR: {batch_psnr:.4f} dB')
             test_loss /= len(noisy_test_subset_loader.dataset)
             test_psnr /= len(noisy_test_subset_loader.dataset)
         
@@ -116,6 +116,7 @@ def main():
         end_time = timer()
         print(f'Total time: {end_time - start_time:.4f} seconds on {device}')
 
-
+    PATH = 'D:/foggy_noisy_unet.pth'
+    torch.save(model.state_dict(), PATH)
 if __name__ == '__main__':
     main()
