@@ -42,7 +42,7 @@ class FoggyDataSet(Dataset):
     
 class FoggyNoisyDataSet(Dataset):
     def __init__(self, foggy_noisy_dir, clear_dir, filenames, transform = None):
-        super().__init__()
+        
         self.foggy_noisy_dir = foggy_noisy_dir
         self.clear_dir = clear_dir
         self.filenames = filenames

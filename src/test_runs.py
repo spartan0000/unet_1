@@ -29,7 +29,7 @@ from build_dataloader import FoggyDataSet, FoggyNoisyDataSet, train_test_split_f
 from unet_model import Unet, Unet_lite
 
 #hyperparameters and other settings
-n_epochs = 2
+n_epochs = 5
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 lr = 1e-4
 
@@ -98,7 +98,7 @@ def main():
         model.train()
     
 
-        for i, (images, targets) in enumerate(noisy_train_loader):
+        for i, (images, targets) in enumerate(noisy_train_subset_loader):
             images, targets = images.to(device), targets.to(device)
 
             with torch.autocast(device_type = 'cuda', enabled = use_amp): #mixed precision really made the training time faster
@@ -120,14 +120,14 @@ def main():
             #if i % 100 == 0:
             #    print(f'Epoch: {epoch} | Batch: {i} | Training loss: {loss.item():.4f} | PSNR: {batch_psnr:.4f} dB')
 
-        training_loss /= len(noisy_train_loader.dataset)
-        train_psnr /= len(noisy_train_loader.dataset)
+        training_loss /= len(noisy_train_subset_loader.dataset)
+        train_psnr /= len(noisy_train_subset_loader.dataset)
 
         test_loss = 0.0
         test_psnr = 0.0
         model.eval()
         with torch.inference_mode():
-            for j, (images, targets) in enumerate(noisy_test_loader):
+            for j, (images, targets) in enumerate(noisy_test_subset_loader):
                 images, targets = images.to(device), targets.to(device)
                 test_outputs = model(images)
                 loss = loss_fn(test_outputs, targets)
@@ -142,10 +142,10 @@ def main():
                 #if j % 100 == 0:   
 
                 #    print(f'Epoch: {epoch} | Test batch: {j} | Test loss: {loss.item():.4f} | PSNR: {batch_psnr:.4f} dB')
-            test_loss /= len(noisy_test_loader.dataset)
-            test_psnr /= len(noisy_test_loader.dataset)
+            test_loss /= len(noisy_test_subset_loader.dataset)
+            test_psnr /= len(noisy_test_subset_loader.dataset)
         
-        print(f' {epoch} / {n_epochs} - Training loss: {training_loss:.4f}| PSNR: {test_psnr:.4f} dB | Test loss: {test_loss:.4f} | PSNR: {test_psnr:.4f} dB')
+        print(f' {epoch} / {n_epochs} - Training loss: {training_loss:.4f}| PSNR: {train_psnr:.4f} dB | Test loss: {test_loss:.4f} | PSNR: {test_psnr:.4f} dB')
         
         
         wandb.log({
