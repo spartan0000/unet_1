@@ -7,5 +7,6 @@ wheels/
 *.egg-info
 *.pth
 .ipynb_checkpoints/
-# Virtual environments
+
 .venv
+.env
