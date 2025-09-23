@@ -10,3 +10,7 @@ wheels/
 
 .venv
 .env
+
+wandb/
+*.pt
+*.ckpt 
